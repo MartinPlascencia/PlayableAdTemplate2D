@@ -39,7 +39,7 @@ export default class AssetsInlineHelper {
     }
 
     private _createManifestFromJson(): void {
-        const assetContext = require.context('../assets', true, /\.(png|jpe?g|svg|glb|ttf|mp3|wav|ogg)$/i);
+        const assetContext = require.context('../assets', true, /\.(png|jpe?g|gif|svg|webp|glb|ttf|otf|mp3|wav|ogg)$/i);
 
         this._manifest = {
             bundles: (this._gameAssets.bundles || []).map((bundle: Bundle) => ({
