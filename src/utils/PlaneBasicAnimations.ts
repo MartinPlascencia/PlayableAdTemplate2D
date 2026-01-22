@@ -2,6 +2,7 @@ import gsap from "gsap";
 import { Container, Sprite, Graphics } from "pixi.js";
 
 export default class PlaneBasicAnimations {
+    static _lastScale: { x: number; y: number; };
     static animateButton(buttonContainer: Container | Sprite, callback?: () => void,reactivateButton = false): void {
         buttonContainer.eventMode = "none";
         gsap.to(buttonContainer.scale, {
@@ -81,6 +82,38 @@ export default class PlaneBasicAnimations {
         });
     }
 
+    static shake(object: Container | Sprite, intensity = 15, duration = 0.25, repeatTimes = 5): void {
+        const initialAngle = object.angle;
+        gsap.to(object, {
+            angle: initialAngle + intensity,
+            duration: duration,
+            ease: "linear",
+            yoyo: true,
+            repeat: repeatTimes,
+            onComplete: () => {
+                object.angle = initialAngle;
+            }
+        });
+    }
+
+    static pulse(object: Container | Sprite, scaleFactor = 1.1, duration = 0.5): void {
+        this._lastScale = { x: object.scale.x, y: object.scale.y };
+        gsap.to(object.scale, {
+            x: object.scale.x * scaleFactor,
+            y: object.scale.y * scaleFactor,
+            duration,
+            ease: "sine.inOut",
+            yoyo: true,
+            repeat: -1,
+        });
+    }
+
+    static stopPulse(object: Container | Sprite): void {
+        gsap.killTweensOf(object.scale);
+        if (this._lastScale)
+            object.scale.set(this._lastScale.x, this._lastScale.y);
+    }
+
     static comeFromTop(object: Container | Sprite, duration = 0.4): void {
         gsap.from(object, {
             y: -object.height,
@@ -97,23 +130,34 @@ export default class PlaneBasicAnimations {
         });
     }
 
-    static shakeContainer(target: Container | Sprite, intensity = 10, duration = 0.5): void {
-        const original = { x: target.x, y: target.y };
-        const timeline = gsap.timeline({
+    static moveTo(object: Container | Sprite, x: number, y: number, duration = 0.5, callback?: () => void): void {
+        gsap.to(object, {
+            x,
+            y,
+            duration,
+            ease: "back.out",
             onComplete: () => {
-                target.x = original.x;
-                target.y = original.y;
+                callback?.();
             },
         });
+    }
 
-        const shakes = Math.floor(duration / 0.05);
-        for (let i = 0; i < shakes; i++) {
-            timeline.to(target, {
-                x: original.x + (Math.random() - 0.5) * intensity,
-                y: original.y + (Math.random() - 0.5) * intensity,
-                duration: 0.025,
-                ease: "power2.out",
-            });
-        }
+    static disappear(object: Container | Sprite, duration = 0.4): void {
+        const originalScale = { x: object.scale.x, y: object.scale.y };
+        gsap.to(object.scale, {
+            x: originalScale.x * 1.2,
+            y: originalScale.y * 1.2,
+            duration,
+            ease: "linear",
+            onComplete: () => {
+                object.scale.set(originalScale.x, originalScale.y);
+            }
+        });
+
+        gsap.to(object, {
+            alpha: 0,
+            duration,
+            ease: "linear",
+        });
     }
 }

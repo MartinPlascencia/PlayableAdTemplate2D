@@ -92,6 +92,7 @@ export default class PreloadScene extends Container {
             mask.scale.x = progress;
         }).then(async () => {
             await this._assetsInlineHelper.loadSounds();
+            await this._assetsInlineHelper.loadSpineAssets();
             PlaneBasicAnimations.fadeOut(barAssetsContainer, 1);
             this._continueCallback?.();
         })

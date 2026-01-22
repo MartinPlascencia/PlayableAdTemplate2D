@@ -19,5 +19,14 @@ export default {
         { alias: "grobold", src: "fonts/grobold.ttf" }
     ],
     sounds: [],
-    textures: []
+    textures: [],
+    "spine": [
+        {
+            "alias": "pretty_woman",
+            "atlas": "spines/pretty_woman.atlas",
+            "texture": "spines/pretty_woman.png",
+            "json": "spines/pretty_woman.json",
+            "imageName": "pretty_woman.png"
+        },
+    ]
 };

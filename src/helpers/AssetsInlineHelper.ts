@@ -3,6 +3,8 @@ import { Assets, AssetsManifest } from 'pixi.js';
 import manifestJson from '../data/assets';
 import sound from '../utils/Sound';
 
+import spineJson from '../assets/spines/pretty_woman.json';
+
 // Add webpack require.context type declaration
 declare const require: {
     context(path: string, deep?: boolean, filter?: RegExp): {
@@ -28,10 +30,20 @@ type AssetEntry = {
     src: string;
 };
 
+type SpineAssetEntry = {
+    alias: string;
+    atlas: string;
+    texture: string;
+    skeleton?: string;
+    json?: string;
+    imageName: string;
+};
+
 export default class AssetsInlineHelper {
     private _manifest!: AssetsManifest;
     private _fontEntries: AssetEntry[] = [];
     private _soundEntries: AssetEntry[] = [];
+    private _spineAssets: SpineAssetEntry[] = [];
     private _gameAssets: GameAssets = manifestJson as GameAssets;
 
     constructor() {
@@ -39,8 +51,7 @@ export default class AssetsInlineHelper {
     }
 
     private _createManifestFromJson(): void {
-        const assetContext = require.context('../assets', true, /\.(png|jpe?g|gif|svg|webp|glb|ttf|otf|mp3|wav|ogg)$/i);
-
+        const assetContext = require.context('../assets', true, /\.(png|jpe?g|gif|svg|webp|glb|ttf|otf|mp3|wav|ogg|atlas|json|skel)$/i);
         this._manifest = {
             bundles: (this._gameAssets.bundles || []).map((bundle: Bundle) => ({
                 name: bundle.name,
@@ -60,6 +71,58 @@ export default class AssetsInlineHelper {
             alias: sound.alias,
             src: assetContext(`./${sound.src}`),
         }));
+
+        this._spineAssets = manifestJson.spine.map((entry: SpineAssetEntry) => ({
+            ...entry,
+            atlas: assetContext(`./${entry.atlas}`),
+            texture: assetContext(`./${entry.texture}`),
+            skeleton: entry.skeleton
+                ? assetContext(`./${entry.skeleton}`)
+                : undefined,
+            json: entry.json
+                ? assetContext(`./${entry.json}`)
+                : undefined,
+        }));
+    }
+
+    private _normalizeToUrl(src: string): string {
+        // Already a URL (http, data, blob)
+        if (/^(https?:|data:|blob:)/.test(src)) {
+            return src;
+        }
+
+        // Inline JSON content → convert to Blob URL
+        const blob = new Blob([src], { type: 'application/json' });
+        return URL.createObjectURL(blob);
+    }
+
+    public async loadSpineAssets(): Promise<void> {
+        for (const spine of this._spineAssets) {
+            await this._loadSpineAssets(spine);
+        }
+    }
+
+    private async _loadSpineAssets({alias, atlas, texture, skeleton, json, imageName}: SpineAssetEntry): Promise<void> {
+        const textureBase64 = await Assets.load({
+            alias: `${alias}_texture`,
+            parser: 'loadTextures',
+            src: texture,
+        });
+
+        Assets.add({
+            alias: `${alias}_atlas`,
+            parser: 'spineTextureAtlasLoader',
+            src: atlas,
+            data: { images: { [imageName]: textureBase64.source } },
+        });
+
+        Assets.add({
+            alias: `${alias}_json`,
+            parser: skeleton ? 'spineSkeletonLoader' : 'loadJson',
+            src: this._normalizeToUrl(skeleton ?? json!),
+        }); 
+
+        await Assets.load([`${alias}_json`, `${alias}_atlas`]);
     }
 
     public async init(): Promise<void> {
